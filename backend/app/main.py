@@ -2,10 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import clientes, lotes, simulaciones
+from app.api.routes import auth, clientes, lotes, simulaciones
 from app.core.config import settings
-from app.db.base import Base
-from app.db.session import engine
+from app.models import *  # noqa: F403,F401
 
 app = FastAPI(title=settings.app_name)
 
@@ -22,11 +21,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-Base.metadata.create_all(bind=engine)
-
 app.include_router(clientes.router)
 app.include_router(lotes.router)
 app.include_router(simulaciones.router)
+app.include_router(auth.router)
 app.mount("/uploads", StaticFiles(directory=settings.uploads_dir), name="uploads")
 
 

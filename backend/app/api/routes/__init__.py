@@ -1,3 +1,3 @@
-from app.api.routes import clientes, lotes, simulaciones
+from app.api.routes import auth, clientes, lotes, simulaciones
 
-__all__ = ["clientes", "lotes", "simulaciones"]
+__all__ = ["auth", "clientes", "lotes", "simulaciones"]

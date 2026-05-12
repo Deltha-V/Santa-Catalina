@@ -144,6 +144,57 @@ h3 { font-size: 1.55rem; margin: 0 0 0.4rem; }
   gap: 1rem;
   background: #f3f4f6;
 }
+.static-map-wrap {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #cbd3df;
+  background: #e9edf5;
+}
+.static-map-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  opacity: 0.42;
+  filter: grayscale(20%) contrast(0.9);
+}
+.static-map-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}
+.map-poly {
+  cursor: pointer;
+  stroke-width: 12;
+  fill-opacity: 0.78;
+  transition: fill-opacity 0.15s ease, filter 0.15s ease;
+}
+.map-poly:hover {
+  fill-opacity: 0.95;
+  filter: drop-shadow(0 0 10px rgba(0, 157, 255, 0.95));
+}
+.map-poly.status-disponible { fill: #00ff6a; stroke: #007f35; }
+.map-poly.status-vendido { fill: #ff1a1a; stroke: #8f0000; }
+.map-poly.status-reservado { fill: #ffd000; stroke: #8f6e00; }
+.map-poly.status-acuerdo_privado { fill: #7d3cff; stroke: #3d00a8; }
+.map-poly.status-no_disponible { fill: #9aa4b2; stroke: #4b5563; }
+.map-poly.debug-poly {
+  fill: #00e5ff;
+  stroke: #ff00e6;
+  fill-opacity: 0.75;
+  stroke-width: 16;
+}
+
+.status-disponible { background: #baf0cb; border-color: #16a34a; }
+.status-vendido { background: #ffd8d8; border-color: #ef4444; }
+.status-reservado { background: #ffe9af; border-color: #d3a300; }
+.status-no_disponible { background: #dadde4; border-color: #98a2b3; }
+.status-acuerdo_privado { background: #e4d7ff; border-color: #8b5cf6; }
 
 .manzana-card { border: 1px solid #c4cad5; border-radius: 12px; background: #eef0f5; padding: 0.8rem; }
 .manzana-card h3 { margin: 0 0 0.5rem; text-align: center; }
@@ -160,11 +211,6 @@ h3 { font-size: 1.55rem; margin: 0 0 0.4rem; }
   transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
 .manzana-lote:hover { border-color: #00bcff; box-shadow: 0 0 8px #33ccff, 0 0 16px rgba(0, 197, 255, 0.9); transform: translateY(-1px); }
-.status-disponible { background: #baf0cb; border-color: #16a34a; }
-.status-vendido { background: #ffd8d8; border-color: #ef4444; }
-.status-reservado { background: #ffe9af; border-color: #d3a300; }
-.status-no_disponible { background: #dadde4; border-color: #98a2b3; }
-.status-acuerdo_privado { background: #e4d7ff; border-color: #8b5cf6; }
 
 .modal-backdrop { position: fixed; inset: 0; background: rgba(10, 18, 20, 0.55); display: grid; place-items: center; padding: 1rem; z-index: 100; }
 .modal-card { width: min(920px, 95vw); max-height: 90vh; overflow: auto; background: white; border-radius: 14px; padding: 1rem; border: 1px solid #cfe0da; }
@@ -177,6 +223,36 @@ h3 { font-size: 1.55rem; margin: 0 0 0.4rem; }
 .plan-card p { margin: 0.2rem 0; }
 .plan-card button { margin-top: 0.5rem; border: none; border-radius: 8px; padding: 0.45rem 0.6rem; background: #0f7a67; color: white; cursor: pointer; }
 
+.admin-auth-wrap { display: grid; place-items: center; min-height: 60vh; }
+.admin-auth-card { width: min(480px, 95vw); }
+.admin-form { display: grid; gap: 0.8rem; margin-top: 1rem; }
+.admin-form label { display: grid; gap: 0.35rem; font-weight: 700; color: #263b61; }
+.admin-form input {
+  border: 1px solid #c5ccd8;
+  background: #f5f6f8;
+  border-radius: 12px;
+  padding: 0.8rem;
+  font: inherit;
+}
+.admin-actions { display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center; }
+.admin-ghost { border-color: #ccd6ea; color: #2b3f66; }
+.admin-crud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+.admin-list { display: grid; gap: 0.7rem; max-height: 65vh; overflow: auto; padding-right: 0.4rem; }
+.admin-item {
+  border: 1px solid #d7deeb;
+  border-radius: 12px;
+  padding: 0.75rem;
+  background: #f8f9fc;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: center;
+}
+.admin-item p { margin: 0.2rem 0 0; color: #506182; }
+.admin-gallery-grid { margin-top: 1rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.8rem; }
+.admin-gallery-item { border: 1px solid #d7deeb; border-radius: 10px; padding: 0.6rem; background: #f8f9fc; display: grid; gap: 0.6rem; }
+.admin-gallery-image { width: 100%; height: 130px; object-fit: cover; border-radius: 8px; border: 1px solid #cdd6e6; }
+
 .whatsapp-btn {
   position: fixed; right: 1rem; bottom: 1rem; width: 72px; height: 72px; border-radius: 999px;
   display: grid; place-items: center; text-indent: -9999px; overflow: hidden;
@@ -185,6 +261,6 @@ h3 { font-size: 1.55rem; margin: 0 0 0.4rem; }
 .whatsapp-btn::after { content: "W"; text-indent: 0; color: #fff; font-weight: 900; font-size: 1.6rem; }
 
 @media (max-width: 980px) {
-  .info-grid, .finance-grid, .contact-grid, .hero-stats, .plans-grid { grid-template-columns: 1fr; }
+  .info-grid, .finance-grid, .contact-grid, .hero-stats, .plans-grid, .admin-crud-grid { grid-template-columns: 1fr; }
   .header-inner { flex-direction: column; align-items: flex-start; }
 }

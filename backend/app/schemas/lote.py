@@ -24,6 +24,10 @@ class LoteCreate(LoteBase):
     numero_lote: str = Field(min_length=1, max_length=50)
 
 
+class LoteUpdate(LoteBase):
+    pass
+
+
 class LoteRead(LoteBase):
     numero_lote: str
     plano_imagen_url: str | None = None

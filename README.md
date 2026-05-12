@@ -3,7 +3,7 @@
 ## Stack
 - Frontend: React + TypeScript (Vite)
 - Backend: FastAPI (Python)
-- Base de datos: SQLAlchemy (SQLite por defecto)
+- Base de datos: PostgreSQL + SQLAlchemy + Alembic
 
 ## Modelo de datos
 - Cliente: `id`, `email`
@@ -14,9 +14,22 @@
 2. `python -m venv .venv`
 3. `.venv\Scripts\activate`
 4. `pip install -r requirements.txt`
-5. `uvicorn app.main:app --reload`
+5. Crear `.env` (puedes copiar desde `.env.example`)
+6. Levantar Postgres local (opcion recomendada):
+   - desde la raiz del proyecto: `docker compose up -d postgres`
+7. `alembic upgrade head`
+8. `uvicorn app.main:app --reload`
 
 API base: `http://127.0.0.1:8000`
+
+### Migraciones (Alembic)
+- Crear migracion nueva: `alembic revision --autogenerate -m "descripcion"`
+- Aplicar migraciones: `alembic upgrade head`
+- Volver una migracion atras: `alembic downgrade -1`
+
+### Desarrollo vs Produccion
+- Desarrollo recomendado: Postgres en Docker (simula entorno real sin instalar Postgres en Windows).
+- Produccion (Hostinger): usar `DATABASE_URL` del servidor gestionado y ejecutar `alembic upgrade head` en deploy.
 
 ### Carga masiva de lotes por Excel
 - Endpoint: `POST /lotes/import-excel`
@@ -34,5 +47,3 @@ API base: `http://127.0.0.1:8000`
 3. `npm run dev`
 
 App: `http://127.0.0.1:5173`
-
-

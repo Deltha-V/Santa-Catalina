@@ -10,6 +10,7 @@ const navItems = [
   { to: "/lotes", label: "Lotes" },
   { to: "/financiacion", label: "Financiacion" },
   { to: "/precios", label: "Precios" },
+  { to: "/admin", label: "Admin" },
 ];
 
 export function MainLayout({ children }: { children: ReactNode }) {

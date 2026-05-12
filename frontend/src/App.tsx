@@ -1,5 +1,8 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { RequireAdmin } from "./components/RequireAdmin";
 import { MainLayout } from "./layout/MainLayout";
+import { AdminDashboardPage } from "./pages/AdminDashboardPage";
+import { AdminLoginPage } from "./pages/AdminLoginPage";
 import { ContactoPage } from "./pages/ContactoPage";
 import { FinanciacionPage } from "./pages/FinanciacionPage";
 import { GaleriaPage } from "./pages/GaleriaPage";
@@ -19,6 +22,15 @@ export default function App() {
         <Route path="/lotes" element={<LotesPage />} />
         <Route path="/financiacion" element={<FinanciacionPage />} />
         <Route path="/precios" element={<PreciosPage />} />
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route
+          path="/admin"
+          element={
+            <RequireAdmin>
+              <AdminDashboardPage />
+            </RequireAdmin>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </MainLayout>

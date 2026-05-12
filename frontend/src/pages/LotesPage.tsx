@@ -46,6 +46,58 @@ function buildPlan(modality: Modality, priceUsd: number, usdToArs: number): Plan
   return { modalidad: modality, moneda: "USD", total: priceUsd, entrega, financiado, cuotas: 36, valorCuota: financiado / 36 };
 }
 
+type BlockPlacement = { x: number; y: number; w: number; h: number };
+
+const PLANO_WIDTH = 4500;
+const PLANO_HEIGHT = 8000;
+
+const BLOCK_POSITIONS: Record<string, BlockPlacement> = {
+  "1": { x: 74, y: 24, w: 18, h: 20 },
+  "2": { x: 74, y: 46.2, w: 18, h: 20 },
+  "3": { x: 52, y: 24, w: 18, h: 20 },
+  "4": { x: 52, y: 46.2, w: 18, h: 20 },
+  "5": { x: 30, y: 24, w: 18, h: 20 },
+  "6": { x: 30, y: 46.2, w: 18, h: 20 },
+  "7": { x: 8, y: 24, w: 18, h: 20 },
+  "8": { x: 52, y: 20, w: 18, h: 20 },
+  "9": { x: 52, y: 46.2, w: 18, h: 20 },
+  "10": { x: 8, y: 46.2, w: 18, h: 20 },
+  "11": { x: 8, y: 20, w: 18, h: 20 },
+  "12": { x: 74, y: 20, w: 18, h: 20 },
+  "13": { x: 74, y: 46.2, w: 18, h: 20 },
+  "14": { x: 30, y: 20, w: 18, h: 20 },
+};
+
+function ParseLoteNumber(id: string) {
+  const match = id.match(/L(\d+)/i) ?? id.match(/(\d+)/);
+  return match ? Number(match[1]) : 0;
+}
+
+function blockToPolygons(block: BlockPlacement, lotes: Lote[]) {
+  const sorted = [...lotes].sort((a, b) => ParseLoteNumber(a.numero_lote) - ParseLoteNumber(b.numero_lote));
+  const half = Math.ceil(sorted.length / 2);
+  const top = sorted.slice(0, half);
+  const bottom = sorted.slice(half);
+
+  const buildRow = (row: Lote[], rowIndex: 0 | 1) => {
+    const rowHeight = block.h / 2;
+    const y = block.y + rowIndex * rowHeight;
+    return row.map((lote, idx) => {
+      const lotWidth = block.w / row.length;
+      const x = block.x + idx * lotWidth;
+      const points = [
+        [x * (PLANO_WIDTH / 100), y * (PLANO_HEIGHT / 100)],
+        [(x + lotWidth) * (PLANO_WIDTH / 100), y * (PLANO_HEIGHT / 100)],
+        [(x + lotWidth) * (PLANO_WIDTH / 100), (y + rowHeight) * (PLANO_HEIGHT / 100)],
+        [x * (PLANO_WIDTH / 100), (y + rowHeight) * (PLANO_HEIGHT / 100)],
+      ];
+      return { lote, points };
+    });
+  };
+
+  return [...buildRow(top, 0), ...buildRow(bottom, 1)];
+}
+
 export function LotesPage() {
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [selected, setSelected] = useState<Lote | null>(null);
@@ -97,6 +149,13 @@ export function LotesPage() {
     });
     return c;
   }, [lotes]);
+  const polygonCount = useMemo(() => {
+    return manzanas.reduce((acc, manzana) => {
+      const placement = BLOCK_POSITIONS[manzana.name.trim()];
+      if (!placement) return acc;
+      return acc + manzana.items.length;
+    }, 0);
+  }, [manzanas]);
 
   async function onTrack(plan: PlanResult) {
     if (!selected) return;
@@ -150,6 +209,9 @@ export function LotesPage() {
         <span className="chip">No comercializable <b>{counters.no_disponible}</b></span>
       </div>
       <div className="card">
+        <p><strong>Debug:</strong> lotes API = {lotes.length} · manzanas = {manzanas.length} · polígonos esperados = {polygonCount}</p>
+      </div>
+      <div className="card">
         <h3>Importar Lotes desde Excel</h3>
         <p>Sube el archivo .xlsx de disponibilidad para cargar o actualizar lotes masivamente.</p>
         <input type="file" accept=".xlsx" onChange={onImportExcel} disabled={importing} />
@@ -166,23 +228,36 @@ export function LotesPage() {
           <p>No hay lotes cargados todavia. Carga lotes desde backend para visualizar el mapa por manzanas.</p>
         </div>
       )}
-      <div className="block-map card">
-        {manzanas.map((manzana) => (
-          <article key={manzana.name} className="manzana-card">
-            <h3>Manzana {manzana.name}</h3>
-            <div className="manzana-grid">
-              {manzana.items.map((lote) => (
-                <button
-                  key={lote.numero_lote}
-                  className={`manzana-lote status-${lote.estado}`}
-                  onClick={() => setSelected(lote)}
-                >
-                  {lote.numero_lote}
-                </button>
-              ))}
-            </div>
-          </article>
-        ))}
+      <div className="card">
+        <div className="static-map-wrap">
+          <img src="/plano-general.jpg" alt="Plano general" className="static-map-image" />
+          <svg className="static-map-svg" viewBox={`0 0 ${PLANO_WIDTH} ${PLANO_HEIGHT}`} preserveAspectRatio="xMidYMid meet">
+            {manzanas.flatMap((manzana) => {
+              const key = manzana.name.trim();
+              const placement = BLOCK_POSITIONS[key];
+              if (!placement) return [];
+              return blockToPolygons(placement, manzana.items).map(({ lote, points }) => {
+                const pointsAttr = points.map(([x, y]) => `${x},${y}`).join(" ");
+                const cls = `map-poly status-${lote.estado}`;
+                return (
+                  <polygon
+                    key={lote.numero_lote}
+                    points={pointsAttr}
+                    className={cls}
+                    onClick={() => setSelected(lote)}
+                  />
+                );
+              });
+            })}
+            {polygonCount === 0 && (
+              <>
+                <polygon points="400,1200 1200,1200 1200,2200 400,2200" className="map-poly debug-poly" />
+                <polygon points="1400,1200 2200,1200 2200,2200 1400,2200" className="map-poly debug-poly" />
+                <polygon points="2400,1200 3200,1200 3200,2200 2400,2200" className="map-poly debug-poly" />
+              </>
+            )}
+          </svg>
+        </div>
       </div>
 
       {selected && (

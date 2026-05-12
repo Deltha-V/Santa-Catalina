@@ -18,6 +18,13 @@ export interface Lote {
 
 export interface LoteCreate extends Omit<Lote, "plano_imagen_url"> {}
 
+export interface LoteImagen {
+  id: number;
+  lote_numero: string;
+  image_url: string;
+  orden: number;
+}
+
 export type Modality = "contado" | "12_pesos" | "12_usd" | "36_usd";
 export type Currency = "USD" | "ARS";
 
