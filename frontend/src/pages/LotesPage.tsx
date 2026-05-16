@@ -2,6 +2,9 @@ import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { createSimulacion, getLotes, importLotesExcel } from "../api/client";
 import { Lote, Modality } from "../api/types";
 
+// 1. Importamos el archivo JSON de diseño directamente
+import mapaDesignData from "./LOTEO COMPLETO.json"; 
+
 type PlanResult = {
   modalidad: Modality;
   moneda: "USD" | "ARS";
@@ -46,56 +49,9 @@ function buildPlan(modality: Modality, priceUsd: number, usdToArs: number): Plan
   return { modalidad: modality, moneda: "USD", total: priceUsd, entrega, financiado, cuotas: 36, valorCuota: financiado / 36 };
 }
 
-type BlockPlacement = { x: number; y: number; w: number; h: number };
-
-const PLANO_WIDTH = 4500;
-const PLANO_HEIGHT = 8000;
-
-const BLOCK_POSITIONS: Record<string, BlockPlacement> = {
-  "1": { x: 74, y: 24, w: 18, h: 20 },
-  "2": { x: 74, y: 46.2, w: 18, h: 20 },
-  "3": { x: 52, y: 24, w: 18, h: 20 },
-  "4": { x: 52, y: 46.2, w: 18, h: 20 },
-  "5": { x: 30, y: 24, w: 18, h: 20 },
-  "6": { x: 30, y: 46.2, w: 18, h: 20 },
-  "7": { x: 8, y: 24, w: 18, h: 20 },
-  "8": { x: 52, y: 20, w: 18, h: 20 },
-  "9": { x: 52, y: 46.2, w: 18, h: 20 },
-  "10": { x: 8, y: 46.2, w: 18, h: 20 },
-  "11": { x: 8, y: 20, w: 18, h: 20 },
-  "12": { x: 74, y: 20, w: 18, h: 20 },
-  "13": { x: 74, y: 46.2, w: 18, h: 20 },
-  "14": { x: 30, y: 20, w: 18, h: 20 },
-};
-
-function ParseLoteNumber(id: string) {
-  const match = id.match(/L(\d+)/i) ?? id.match(/(\d+)/);
-  return match ? Number(match[1]) : 0;
-}
-
-function blockToPolygons(block: BlockPlacement, lotes: Lote[]) {
-  const sorted = [...lotes].sort((a, b) => ParseLoteNumber(a.numero_lote) - ParseLoteNumber(b.numero_lote));
-  const half = Math.ceil(sorted.length / 2);
-  const top = sorted.slice(0, half);
-  const bottom = sorted.slice(half);
-
-  const buildRow = (row: Lote[], rowIndex: 0 | 1) => {
-    const rowHeight = block.h / 2;
-    const y = block.y + rowIndex * rowHeight;
-    return row.map((lote, idx) => {
-      const lotWidth = block.w / row.length;
-      const x = block.x + idx * lotWidth;
-      const points = [
-        [x * (PLANO_WIDTH / 100), y * (PLANO_HEIGHT / 100)],
-        [(x + lotWidth) * (PLANO_WIDTH / 100), y * (PLANO_HEIGHT / 100)],
-        [(x + lotWidth) * (PLANO_WIDTH / 100), (y + rowHeight) * (PLANO_HEIGHT / 100)],
-        [x * (PLANO_WIDTH / 100), (y + rowHeight) * (PLANO_HEIGHT / 100)],
-      ];
-      return { lote, points };
-    });
-  };
-
-  return [...buildRow(top, 0), ...buildRow(bottom, 1)];
+// Función auxiliar para normalizar identificadores (Ej: "Lote 21" -> "21")
+function normalizeLoteNumber(val: string): string {
+  return val.toLowerCase().replace("lote", "").trim();
 }
 
 export function LotesPage() {
@@ -108,6 +64,10 @@ export function LotesPage() {
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
 
+  // 2. Usamos las dimensiones exactas provistas por tu JSON de diseño
+  const PLANO_WIDTH = mapaDesignData.imageSize.width;   // 2250
+  const PLANO_HEIGHT = mapaDesignData.imageSize.height; // 4000
+
   async function loadLotes() {
     try {
       const rows = await getLotes();
@@ -115,7 +75,7 @@ export function LotesPage() {
       setLoadError(null);
     } catch {
       setLotes([]);
-      setLoadError("No se pudo conectar con el backend. Revisa que el API este corriendo en http://127.0.0.1:8000.");
+      setLoadError("No se pudo conectar con el backend. Revisa que el API este corriendo.");
     }
   }
 
@@ -123,39 +83,28 @@ export function LotesPage() {
     void loadLotes();
   }, []);
 
-  const manzanas = useMemo(() => {
-    const grouped: Record<string, Lote[]> = {};
+  // 3. INDEXACIÓN EFICIENTE: Mapeamos los lotes de la DB para buscarlos al instante sin ralentizar el renderizado
+  const lotesDbMap = useMemo(() => {
+    const map = new Map<string, Lote>();
     lotes.forEach((lote) => {
-      const key = lote.manzana || "Sin manzana";
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(lote);
+      const key = `${lote.manzana.trim()}-${normalizeLoteNumber(lote.numero_lote)}`;
+      map.set(key, lote);
     });
-    return Object.entries(grouped)
-      .sort((a, b) => a[0].localeCompare(b[0], "es"))
-      .map(([name, items]) => ({
-        name,
-        items: items.sort((a, b) => a.numero_lote.localeCompare(b.numero_lote, "es", { numeric: true })),
-      }));
+    return map;
   }, [lotes]);
 
   const plans = useMemo(
     () => ["contado", "12_pesos", "12_usd", "36_usd"].map((m) => buildPlan(m as Modality, priceUsd, usdToArs)),
     [priceUsd, usdToArs]
   );
+
   const counters = useMemo(() => {
     const c = { total: lotes.length, disponible: 0, reservado: 0, vendido: 0, acuerdo_privado: 0, no_disponible: 0 };
     lotes.forEach((l) => {
-      c[l.estado] += 1;
+      if (c[l.estado] !== undefined) c[l.estado] += 1;
     });
     return c;
   }, [lotes]);
-  const polygonCount = useMemo(() => {
-    return manzanas.reduce((acc, manzana) => {
-      const placement = BLOCK_POSITIONS[manzana.name.trim()];
-      if (!placement) return acc;
-      return acc + manzana.items.length;
-    }, 0);
-  }, [manzanas]);
 
   async function onTrack(plan: PlanResult) {
     if (!selected) return;
@@ -184,7 +133,7 @@ export function LotesPage() {
     try {
       const result = await importLotesExcel(file);
       setImportMessage(
-        `Importacion completada. Nuevos: ${result.inserted}, actualizados: ${result.updated}, omitidos: ${result.skipped}.`
+        `Importación completada. Nuevos: ${result.inserted}, actualizados: ${result.updated}, omitidos: ${result.skipped}.`
       );
       await loadLotes();
     } catch (err) {
@@ -200,78 +149,88 @@ export function LotesPage() {
       <p className="pill">DISPONIBILIDAD</p>
       <h1 className="title-center">Mapa interactivo del loteo</h1>
       <p className="lead center">Pasá el cursor sobre cada lote para ver su estado. Hacé click para consultar.</p>
+      
       <div className="chips-row">
         <span className="chip dark">Todos <b>{counters.total}</b></span>
-        <span className="chip">Disponible <b>{counters.disponible}</b></span>
-        <span className="chip">Reservado <b>{counters.reservado}</b></span>
-        <span className="chip">Vendido <b>{counters.vendido}</b></span>
-        <span className="chip">Acuerdo privado <b>{counters.acuerdo_privado}</b></span>
-        <span className="chip">No comercializable <b>{counters.no_disponible}</b></span>
+        <span className="chip status-disponible-chip">Disponible <b>{counters.disponible}</b></span>
+        <span className="chip status-reservado-chip">Reservado <b>{counters.reservado}</b></span>
+        <span className="chip status-vendido-chip">Vendido <b>{counters.vendido}</b></span>
+        <span className="chip status-acuerdo_privado-chip">Acuerdo privado <b>{counters.acuerdo_privado}</b></span>
+        <span className="chip status-no_disponible-chip">No comercializable <b>{counters.no_disponible}</b></span>
       </div>
+
       <div className="card">
-        <p><strong>Debug:</strong> lotes API = {lotes.length} · manzanas = {manzanas.length} · polígonos esperados = {polygonCount}</p>
+        <p><strong>Debug:</strong> Lotes en Base de Datos = {lotes.length} · Polígonos vectoriales en Diseño = {mapaDesignData.lotes.length}</p>
       </div>
+
+      {/* Formulario de Importación */}
       <div className="card">
         <h3>Importar Lotes desde Excel</h3>
-        <p>Sube el archivo .xlsx de disponibilidad para cargar o actualizar lotes masivamente.</p>
         <input type="file" accept=".xlsx" onChange={onImportExcel} disabled={importing} />
         {importing && <p>Importando archivo...</p>}
         {importMessage && <p>{importMessage}</p>}
       </div>
-      {loadError && (
-        <div className="card">
-          <p>{loadError}</p>
-        </div>
-      )}
-      {manzanas.length === 0 && (
-        <div className="card">
-          <p>No hay lotes cargados todavia. Carga lotes desde backend para visualizar el mapa por manzanas.</p>
-        </div>
-      )}
+
+      {loadError && <div className="card"><p>{loadError}</p></div>}
+
+      {/* RENDERIZADO DEL MAPA DIGITAL */}
       <div className="card">
         <div className="static-map-wrap">
           <img src="/plano-general.jpg" alt="Plano general" className="static-map-image" />
+          
           <svg className="static-map-svg" viewBox={`0 0 ${PLANO_WIDTH} ${PLANO_HEIGHT}`} preserveAspectRatio="xMidYMid meet">
-            {manzanas.flatMap((manzana) => {
-              const key = manzana.name.trim();
-              const placement = BLOCK_POSITIONS[key];
-              if (!placement) return [];
-              return blockToPolygons(placement, manzana.items).map(({ lote, points }) => {
-                const pointsAttr = points.map(([x, y]) => `${x},${y}`).join(" ");
-                const cls = `map-poly status-${lote.estado}`;
-                return (
-                  <polygon
-                    key={lote.numero_lote}
-                    points={pointsAttr}
-                    className={cls}
-                    onClick={() => setSelected(lote)}
-                  />
-                );
-              });
+            {mapaDesignData.lotes.map((geoLote) => {
+              // Generamos la clave única del archivo de diseño
+              const jsonKey = `${geoLote.manzana.trim()}-${normalizeLoteNumber(geoLote.label)}`;
+              
+              // Buscamos si este lote existe en la base de datos real
+              const loteDb = lotesDbMap.get(jsonKey);
+              
+              // El estado real manda; si no está en la DB usamos el del JSON por defecto
+              const estadoActual = loteDb ? loteDb.estado : geoLote.estado;
+              
+              // Convertimos el array de puntos del JSON en el string nativo requerido por SVG "x1,y1 x2,y2..."
+              const pointsAttr = geoLote.points.map((p) => `${p.x},${p.y}`).join(" ");
+              
+              const isSelected = selected && loteDb && selected.numero_lote === loteDb.numero_lote;
+
+              return (
+                <polygon
+                  key={geoLote.id}
+                  points={pointsAttr}
+                  className={`map-poly status-${estadoActual} ${isSelected ? "poly-selected" : ""}`}
+                  onClick={() => {
+                    if (loteDb) {
+                      setSelected(loteDb);
+                    } else {
+                      alert(`El lote "${geoLote.label}" de la Manzana ${geoLote.manzana} está en el diseño pero no se encuentra cargado en la Base de Datos.`);
+                    }
+                  }}
+                >
+                  {/* Tooltip nativo al pasar el cursor */}
+                  <title>{`${geoLote.label} - Manzana ${geoLote.manzana} (${estadoActual.toUpperCase()})`}</title>
+                </polygon>
+              );
             })}
-            {polygonCount === 0 && (
-              <>
-                <polygon points="400,1200 1200,1200 1200,2200 400,2200" className="map-poly debug-poly" />
-                <polygon points="1400,1200 2200,1200 2200,2200 1400,2200" className="map-poly debug-poly" />
-                <polygon points="2400,1200 3200,1200 3200,2200 2400,2200" className="map-poly debug-poly" />
-              </>
-            )}
           </svg>
         </div>
       </div>
 
+      {/* FICHA POP-UP LATERAL / MODAL */}
       {selected && (
         <div className="modal-backdrop" onClick={() => setSelected(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setSelected(null)}>Cerrar</button>
+            <button className="modal-close" onClick={() => setSelected(null)}>Cerrar ×</button>
             <h2>Lote {selected.numero_lote}</h2>
-            <p><strong>Manzana:</strong> {selected.manzana}</p>
-            <p><strong>Estado:</strong> {selected.estado}</p>
-            <p><strong>Comercializable:</strong> {selected.comercializable ? "Si" : "No"}</p>
-            <p><strong>Frente/Fondo:</strong> {selected.frente_m}m x {selected.fondo_m}m</p>
-            <p><strong>Area:</strong> {selected.area_m2} m2</p>
+            <div className="lote-details-grid">
+              <p><strong>Manzana:</strong> {selected.manzana}</p>
+              <p><strong>Estado actuel:</strong> <span className={`badge status-${selected.estado}`}>{selected.estado}</span></p>
+              <p><strong>Comercializable:</strong> {selected.comercializable ? "Sí" : "No"}</p>
+              <p><strong>Medidas:</strong> {selected.frente_m}m (Frente) x {selected.fondo_m}m (Fondo)</p>
+              <p><strong>Superficie Total:</strong> {selected.area_m2} m²</p>
+            </div>
 
-            <h3>Financiamiento</h3>
+            <h3 style={{ marginTop: "20px" }}>Simulador de Financiamiento</h3>
             <div className="form-row">
               <label>
                 Precio lista (USD)
@@ -290,9 +249,9 @@ export function LotesPage() {
                   <p>Total: {fmt(plan.total, plan.moneda)}</p>
                   <p>Entrega: {fmt(plan.entrega, plan.moneda)}</p>
                   <p>Financiado: {fmt(plan.financiado, plan.moneda)}</p>
-                  <p>{plan.cuotas} cuota/s de {fmt(plan.valorCuota, plan.moneda)}</p>
+                  <p><b>{plan.cuotas} cuota/s de {fmt(plan.valorCuota, plan.moneda)}</b></p>
                   <button onClick={() => void onTrack(plan)} disabled={savingId === plan.modalidad}>
-                    {savingId === plan.modalidad ? "Guardando..." : "Registrar interes"}
+                    {savingId === plan.modalidad ? "Guardando..." : "Registrar interés"}
                   </button>
                 </article>
               ))}

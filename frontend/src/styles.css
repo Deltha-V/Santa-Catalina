@@ -264,3 +264,122 @@ h3 { font-size: 1.55rem; margin: 0 0 0.4rem; }
   .info-grid, .finance-grid, .contact-grid, .hero-stats, .plans-grid, .admin-crud-grid { grid-template-columns: 1fr; }
   .header-inner { flex-direction: column; align-items: flex-start; }
 }
+
+
+
+/* Contenedor del mapa: la imagen define el tamaño relativo */
+.static-map-wrap {
+  position: relative;
+  width: 100%;
+  display: inline-block;
+}
+
+.static-map-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* El SVG se calza de forma absoluta y matemática arriba de la imagen */
+.static-map-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Propiedades base de los polígonos de los lotes */
+.map-poly {
+  fill: rgba(255, 255, 255, 0.15); /* por defecto casi transparente */
+  stroke: #ffffff;                 /* bordes blancos */
+  stroke-width: 1.5px;
+  cursor: pointer;
+  transition: all 0.25s ease-in-out;
+}
+
+/* ---- CÓDIGO DE COLORES POR DISPONIBILIDAD ---- */
+
+.map-poly.status-disponible {
+  fill: rgba(40, 167, 69, 0.4); /* Verde semi-transparente */
+  stroke: #28a745;
+}
+.map-poly.status-disponible:hover {
+  fill: rgba(40, 167, 69, 0.7); /* Brillo al pasar el cursor */
+}
+
+.map-poly.status-reservado {
+  fill: rgba(255, 193, 7, 0.45); /* Amarillo/Naranja */
+  stroke: #ffc107;
+}
+.map-poly.status-reservado:hover {
+  fill: rgba(255, 193, 7, 0.75);
+}
+
+.map-poly.status-vendido {
+  fill: rgba(220, 53, 69, 0.4); /* Rojo */
+  stroke: #dc3545;
+}
+.map-poly.status-vendido:hover {
+  fill: rgba(220, 53, 69, 0.7);
+}
+
+.map-poly.status-acuerdo_privado {
+  fill: rgba(111, 66, 193, 0.4); /* Morado/Violeta */
+  stroke: #6f42c1;
+}
+.map-poly.status-acuerdo_privado:hover {
+  fill: rgba(111, 66, 193, 0.7);
+}
+
+.map-poly.status-no_disponible {
+  fill: rgba(108, 117, 125, 0.5); /* Gris oscuro */
+  stroke: #6c757d;
+}
+
+/* Efecto cuando un lote está seleccionado con el Pop-up abierto */
+.map-poly.poly-selected {
+  fill: rgba(0, 123, 255, 0.6) !important;
+  stroke: #007bff !important;
+  stroke-width: 3px;
+}
+
+/* El contenedor debe ser un bloque relativo */
+.static-map-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  display: block;
+  overflow: hidden;
+}
+
+/* La imagen de fondo dicta el tamaño del contenedor */
+.static-map-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* El SVG se calza de forma absoluta ocupando el 100% de la imagen */
+.static-map-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* Esto es crucial: le dice al SVG que no se estire deformado, 
+     sino que mantenga la proporción del viewBox (0 0 2250 4000) */
+  pointer-events: none; 
+}
+
+/* Reactivamos los eventos del mouse solo para los polígonos, 
+   así podés hacer click a través del SVG */
+.map-poly {
+  pointer-events: auto;
+  fill: rgba(255, 255, 255, 0.1); 
+  stroke: #ffffff;
+  stroke-width: 2px; /* Ajustá el grosor de la línea del lote aquí */
+  cursor: pointer;
+  transition: fill 0.2s, stroke 0.2s;
+}
